@@ -1,0 +1,21 @@
+@startuml operator-sequence-diagram
+' Operator Types? ns, cluster wide, external?
+actor User as user
+boundary KubeAPI as kapi
+control AdmissionController as admctr
+database Etcd as etcd
+control Operator as op
+participant Resources as res
+
+user -> kapi : custom resource changes
+kapi -> admctr : validate custom resources
+admctr -> kapi : return success
+kapi -> etcd : write custom resource changes
+kapi -> user : change successful
+op -> kapi : poll for current state
+kapi -> op : state change
+op -> res : perform changes
+res -> op : resources changed
+op -> kapi : return state?
+
+@enduml
