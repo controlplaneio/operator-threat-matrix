@@ -22,15 +22,22 @@ Kubernetes Operators are an extension of the Kubernetes API and reduce repetitiv
 * [MITRE ATT&CK Cloud Matrix](https://attack.mitre.org/matrices/enterprise/cloud/)
 
 ## Operator Components
+Kubernetes Operators introduces several key components to a cluster, which include:
 
-![Operator Sequence Diagram](images/operator-sequence-diagram.svg)
+1. Custom Resource Definitions (CRDs)
+2. Custom Controller
+3. Operator Namespace*
+4. Service Account*
+5. Logging and Metrics
+
+> \* Operators can utilise existing cluster resources such as initial namespaces, user-facing roles such as cluster-admin.
 
 ## Threat Matrix
 As an Kubernetes Operator is not bound to Kubernetes, that is an Operator can reconcile and manage resources outside of the cluster, it is important to highlight threats which are only applicable to Operators with a external scope. The scope is represented in the following way:
 
 Internal Scope = Kubernetes bound resources (namespaced, clusterwide or multi-cluster bound resources)
 
-<span style="color:orange">External Scope</span> = Resources outside of the Kubernetes cluster (e.g. Cloud Provider)
+**External Scope*** = Resources outside of the Kubernetes cluster (e.g. Cloud Provider)
 
 ![Operator Threat Matrix](images/operator-threat-matrix.svg)
 
