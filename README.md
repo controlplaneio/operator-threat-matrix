@@ -30,10 +30,10 @@ Kubernetes Operators introduces several key components to a cluster, which inclu
 4. Service Account*
 5. Logging and Metrics
 
-> \* Operators can utilise existing cluster resources such as initial namespaces, user-facing roles such as cluster-admin.
+> \* Operators can utilise existing cluster resources such as initial namespaces, serviceaccounts and roles such as cluster-admin.
 
 ## Threat Matrix
-As an Kubernetes Operator is not bound to Kubernetes, that is an Operator can reconcile and manage resources outside of the cluster, it is important to highlight threats which are only applicable to Operators with a external scope. The scope is represented in the following way:
+ Kubernetes Operators are not limited to modifying Kubernetes resources; an Operator can reconcile and manage resources outside of the cluster, such as those of the Cloud Provider. Thus, it is important to highlight threats which are only applicable to Operators with a external scope. The scope is represented in the following way:
 
 Internal Scope = Kubernetes bound resources (namespaced, clusterwide or multi-cluster bound resources)
 
@@ -48,7 +48,7 @@ Internal Scope = Kubernetes bound resources (namespaced, clusterwide or multi-cl
 | Techniques | Description |
 |-----|-----|
 | Using Cloud Credentials | Compromised Cloud credentials can be used to access a Kubernetes Operator. Depending on the scope of the Operator, adversaries may have access to specific resources in a namespace, complete cluster-wide resources or external resources.|
-| Compromised Image in Registry | Kubernetes Operators are fundamentally a customised controller bundled into a container image which is deployed onto the cluster. A container image can be compromised via two primary places, accessing the source code repository for controller and accessing the container image registry. Adversaries with access to the source code repository can modify the controller code to perform malicious actions on the cluster. Adversaries who obtains access to private registry can plant their own compromised image. Operators can also be pulled from public regisities which may contain malicious code. Common public operators can be pulled from https://operatorhub.io/ that are maintained by the community which could be suspetible to supply chain attacks. Building images based on untrusted base images can introduce vulnerable or malicious code. |
+| Compromised Image in Registry | Kubernetes Operators are fundamentally a customised controller bundled into a container image which is deployed onto the cluster. Generally, a container image can be compromised in two places, accessing the source code repository for the controller and accessing the container image registry. Adversaries with access to the source code repository can modify the controller code to perform malicious actions on the cluster. Adversaries who obtain access to private registry can plant their own compromised image. Operators can also be pulled from public regisities which may contain malicious code. Common public operators can be pulled from https://operatorhub.io/ that are maintained by the community which could be susceptible to supply chain attacks. Building images based on untrusted base images can introduce vulnerable or malicious code. |
 | Kubeconfig File | The kubeconfig file contains credentials for accessing a Kubernetes cluster and by proxy a Kubernetes Operator. Adversaries may obtain the kubeconfig file via a users compromised device |
 
 ### Execution
@@ -57,7 +57,7 @@ Internal Scope = Kubernetes bound resources (namespaced, clusterwide or multi-cl
 |-----|-----|
 | Exec into container | Adversaries which have obtained access to a role with "pods/exec" permissions will be able to execute malicious commands in the Operator container. |
 | New Container | Adversaries may leverage the permissions of an Operator to deploy a kubernetes native resource (such as pod) or custom resource (such as another Operator) to run malicious code in the cluster. |
-| Sidecar Injection | A typical use case for an Operator is to deploy and manage a sidecar container to provide supporting functionality alongside an application container. This could be TLS certificates, service-mesh proxies or storage interface. Adversaries can leverage the permissions of an Operator to conceal malicious activity by injecting a sidecar container into an existing authorised pod. |
+| Sidecar Injection | A typical use case for an Operator is to deploy and manage a sidecar container to provide supporting functionality alongside an application container. This could be TLS certificates, service-mesh proxies or storage interface. Adversaries can leverage the permissions of an Operator to conceal malicious activity by injecting a malicious sidecar container into an authorised pod or deployment. |
 | OLM Automatic Install | The Operator Lifecycle Manager (OLM) allows users to maintain up to date Operators within the cluster. Operators can be automatically rolled out based on the subscribed channel and the skipping the designated install plan. Adversaries can abuse this functionality to automatically deploy a malicious Operator bypassing any formal release and review. |
 | **Cloud Instance*** | Adversaries can abuse an Operators Cloud permissions to execute a malicious script or scheduled task on a Cloud instance. This could be full instance, containerised workload or serverless execution. |
 
@@ -77,8 +77,8 @@ Internal Scope = Kubernetes bound resources (namespaced, clusterwide or multi-cl
 | Techniques | Description |
 |-----|-----|
 | Privileged Container | An Operator can be deployed with privileged capabilities allowing access to host level processes. Adversaries which gain access to a privileged Operator can break out of the container "boundary" and access the underlying host. |
-| Cluster-Admin Binding | Operators commonly perform administrative functions inside and/or outside of the Kubernetes cluster. It is not uncommon for an Operator to be allocated cluster admin (or equivelent) to perform the necessary actions against resources. Adversaries can abuse cluster admin permissions assigned to the Operator or permissions which are able to bind cluster admin (or equivelent) to a role, to obtain full access to cluster resources. |
-| Mount Host Path | An Operator which has been mounted to an underlying hosts pa*th can be abused by an adversary to access host level resources. |
+| Cluster-Admin Binding | Operators commonly perform administrative functions inside and/or outside of the Kubernetes cluster. It is not uncommon for an Operator to be allocated cluster admin (or equivalent) permissions to perform the necessary actions against resources. Adversaries can abuse cluster admin permissions assigned to the Operator or permissions which are able to bind cluster admin (or equivalent) to a role, to obtain full access to cluster resources. |
+| Mount Host Path | An Operator which has been mounted to an underlying hosts path can be abused by an adversary to access host level resources. |
 | **Access Cloud Resources*** | Operators with overly permissive access to external resources may allow an adversary to abuse an assigned role to escape cluster restrictions. |
 
 ### Defense Evasion
@@ -88,6 +88,7 @@ Internal Scope = Kubernetes bound resources (namespaced, clusterwide or multi-cl
 | Clear Container Logs | An Operator can be deployed with permissions to modify pod or host logs. Adversaries can abuse these permissions to remove malicious activity from the Operators log or pods which are under the control of the Operator. |
 | Delete Kubernetes Events | Kubernetes events capture state changes or errors across the cluster and are API objects stored on the Kubernetes API Server. An Operator with access to event resources can be abused by adversaries to remove sensitive actions to avoid detection. |
 | Use Another Operator | Adversaries could abuse an Operators privileges to modify another deployed Operator to mask malicious actions and deceive security operations and incident response. |
+| **Disable Cloud Logging** | Adversaries can exploit operators with permissions to provision and modify cloud logging, or individual cloud services (such as S3 Buckets) to disable logging for the entire cloud account or specific service (e.g. S3:PutBucketLogging).  |
 
 ### Credential Access
 
@@ -95,7 +96,7 @@ Internal Scope = Kubernetes bound resources (namespaced, clusterwide or multi-cl
 |-----|-----|
 | List Kubernetes Secrets | Kubernetes Secret is an object which can store sensitive data such as access credentials. An Operator with permissions to list secrets can be abused by adversaries to access sensitive credentials. |
 | Access Operator Service Account | The Operator service account (SA) provides access to the Kubernetes API Server to configure Kubernetes native resources or custom resources. Adversaries with access to the Operator Pod can steal the SA token and perform actions which are bound to the permissions of the SA. |
-| **Access Cloud Credentials*** | An Operator with externally access to Cloud resources will be configured with a service account (SA) role. Adversaries with access to the Operator can steal the SA token and perform actions which are bound to the permissions of the Cloud SA. |
+| **Access Cloud Credentials*** | An Operator which externally accesses Cloud resources can be configured with a K8s service account (SA) role bound to a Cloud Provider SA. Adversaries with access to the Operator can steal the K8s SA token and thus perform actions which are bound to the permissions of the Cloud SA. |
 
 ### Discovery
 
